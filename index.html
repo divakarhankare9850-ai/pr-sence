@@ -995,6 +995,10 @@ input[type="search"]:focus {
 
   var hrOnly = false;
 
+  function getRoster() {
+    return hrOnly ? HR_ROLL_NUMBERS.slice() : studentNumbers.slice();
+  }
+
   var studentNumbers = [];
 
   for (var i = 1; i <= TOTAL; i++) {
@@ -1107,17 +1111,20 @@ input[type="search"]:focus {
   function getCounts() {
 
     var state = getState();
+    var roster = getRoster();
 
     var present = 0;
     var absent = 0;
 
-    Object.keys(state).forEach(function (roll) {
+    roster.forEach(function (number) {
 
-      if (state[roll] === "present") {
+      var status = state[String(number)];
+
+      if (status === "present") {
         present++;
       }
 
-      if (state[roll] === "absent") {
+      if (status === "absent") {
         absent++;
       }
 
@@ -1126,7 +1133,7 @@ input[type="search"]:focus {
     return {
       present: present,
       absent: absent,
-      unmarked: TOTAL - present - absent
+      unmarked: roster.length - present - absent
     };
 
   }
@@ -1222,7 +1229,7 @@ input[type="search"]:focus {
     document.getElementById("unmarkedCount").textContent = count.unmarked;
 
     var marked = count.present + count.absent;
-    var percentage = Math.round((marked / TOTAL) * 100);
+    var percentage = Math.round((marked / getRoster().length) * 100);
 
     document.getElementById("completionText").textContent = percentage + "%";
     document.getElementById("progressBar").style.width = percentage + "%";
@@ -1269,6 +1276,7 @@ input[type="search"]:focus {
     button.classList.toggle("active", hrOnly);
     button.textContent = hrOnly ? "Show All Students" : "Show HR Students Only";
 
+    updateCounts();
     applyFilter();
 
     showToast(
@@ -1319,7 +1327,7 @@ input[type="search"]:focus {
     var absent = [];
     var unmarked = [];
 
-    studentNumbers.forEach(function (number) {
+    getRoster().forEach(function (number) {
 
       var status = state[String(number)];
 
@@ -1372,7 +1380,7 @@ input[type="search"]:focus {
     document.getElementById("sumUnmarked").textContent = count.unmarked;
 
     document.getElementById("sumPercent").textContent =
-      Math.round((count.present / TOTAL) * 100) + "%";
+      Math.round((count.present / getRoster().length) * 100) + "%";
 
     document.getElementById("presentNumbers").textContent =
       formatNumbers(lists.present);
@@ -1468,15 +1476,15 @@ input[type="search"]:focus {
     var count = getCounts();
 
     var text =
-      "Class Attendance\n\n" +
+      (hrOnly ? "HR Students Attendance\n\n" : "Class Attendance\n\n") +
       "Present Numbers\n" + formatNumbers(lists.present) +
       "\n\nAbsent Numbers\n" + formatNumbers(lists.absent) +
       "\n\nUnmarked Numbers\n" + formatNumbers(lists.unmarked) +
       "\n\nPresent: " + count.present +
       "\nAbsent: " + count.absent +
       "\nUnmarked: " + count.unmarked +
-      "\nTotal: " + TOTAL +
-      metadata("Complete Attendance");
+      "\nTotal: " + getRoster().length +
+      metadata(hrOnly ? "HR Attendance" : "Complete Attendance");
 
     copyText(text);
 
@@ -1501,44 +1509,50 @@ input[type="search"]:focus {
 
   function markAllPresent() {
 
-    var state = {};
+    var state = getState();
 
-    studentNumbers.forEach(function (number) {
+    getRoster().forEach(function (number) {
       state[String(number)] = "present";
     });
 
     saveState(state);
     render();
 
-    showToast("All students marked Present");
+    showToast(hrOnly ? "HR students marked Present" : "All students marked Present");
 
   }
 
 
   function markAllAbsent() {
 
-    var state = {};
+    var state = getState();
 
-    studentNumbers.forEach(function (number) {
+    getRoster().forEach(function (number) {
       state[String(number)] = "absent";
     });
 
     saveState(state);
     render();
 
-    showToast("All students marked Absent");
+    showToast(hrOnly ? "HR students marked Absent" : "All students marked Absent");
 
   }
 
 
   function clearAll() {
 
-    saveState({});
+    var state = getState();
+
+    getRoster().forEach(function (number) {
+      delete state[String(number)];
+    });
+
+    saveState(state);
     render();
 
     document.getElementById("summary").classList.remove("show");
 
-    showToast("All marks cleared");
+    showToast(hrOnly ? "HR marks cleared" : "All marks cleared");
 
   }
 
@@ -1550,7 +1564,7 @@ input[type="search"]:focus {
     var state = getState();
     var autoMarked = 0;
 
-    studentNumbers.forEach(function (number) {
+    getRoster().forEach(function (number) {
 
       var key = String(number);
 
@@ -1607,6 +1621,8 @@ input[type="search"]:focus {
       present: count.present,
       absent: count.absent,
       unmarked: count.unmarked,
+      total: count.present + count.absent + count.unmarked,
+      scope: hrOnly ? "HR Students" : "All Students",
       presentNumbers: lists.present,
       absentNumbers: lists.absent
     });
@@ -1655,17 +1671,21 @@ input[type="search"]:focus {
 
     box.innerHTML = history.map(function (record) {
 
+      var recordTotal = record.total || TOTAL;
+      var scopeLabel = record.scope || "All Students";
+
       return (
         '<div class="history-item">' +
           '<span>' +
             '<strong>' + escapeHTML(record.date) + '</strong>' +
+            ' — ' + escapeHTML(scopeLabel) +
             '<br>' +
             'Present: ' + record.present +
             ' • Absent: ' + record.absent +
             ' • Unmarked: ' + record.unmarked +
           '</span>' +
           '<span>' +
-            Math.round((record.present / TOTAL) * 100) + '%' +
+            Math.round((record.present / recordTotal) * 100) + '%' +
           '</span>' +
         '</div>'
       );
@@ -1685,7 +1705,7 @@ input[type="search"]:focus {
 
     var lines = ["Roll Number,Status,Date,Time"];
 
-    studentNumbers.forEach(function (number) {
+    getRoster().forEach(function (number) {
 
       var status = state[String(number)] || "Unmarked";
 
@@ -1702,7 +1722,8 @@ input[type="search"]:focus {
     var link = document.createElement("a");
 
     link.href = url;
-    link.download = "attendance_" + now.toISOString().slice(0, 10) + ".csv";
+    link.download =
+      "attendance_" + (hrOnly ? "hr_" : "") + now.toISOString().slice(0, 10) + ".csv";
 
     document.body.appendChild(link);
     link.click();
@@ -1826,4 +1847,3 @@ input[type="search"]:focus {
 
 </body>
 </html>
-
