@@ -674,14 +674,6 @@ input[type="search"]:focus {
     <button
       class="btn"
       type="button"
-      id="quickAbsentBtn"
-    >
-      Quick Absent Mode
-    </button>
-
-    <button
-      class="btn"
-      type="button"
       id="hrFilterBtn"
     >
       Show HR Students Only
@@ -1551,36 +1543,28 @@ input[type="search"]:focus {
   }
 
 
-  function quickAbsent() {
+  function submitAttendance() {
 
-    var count = getCounts();
-
-    if (count.unmarked === 0) {
-      showToast("All students are already marked");
-      return;
-    }
-
+    // Any student not yet marked Present or Absent is treated as Absent
+    // at the moment of submission.
     var state = getState();
+    var autoMarked = 0;
 
     studentNumbers.forEach(function (number) {
 
       var key = String(number);
 
       if (!state[key]) {
-        state[key] = "present";
+        state[key] = "absent";
+        autoMarked++;
       }
 
     });
 
-    saveState(state);
-    render();
-
-    showToast("Unmarked students set to Present — now tap Absent");
-
-  }
-
-
-  function submitAttendance() {
+    if (autoMarked > 0) {
+      saveState(state);
+      render();
+    }
 
     var count = getCounts();
     var lists = getLists();
@@ -1594,10 +1578,10 @@ input[type="search"]:focus {
       block: "start"
     });
 
-    if (count.unmarked) {
+    if (autoMarked > 0) {
       showToast(
-        "Submitted with " + count.unmarked +
-        " unmarked student" + (count.unmarked === 1 ? "" : "s")
+        autoMarked + " unmarked student" + (autoMarked === 1 ? "" : "s") +
+        " auto-marked Absent — attendance submitted"
       );
     } else {
       showToast("Attendance submitted successfully");
@@ -1793,7 +1777,6 @@ input[type="search"]:focus {
   document.getElementById("allPresentBtn").addEventListener("click", markAllPresent);
   document.getElementById("allAbsentBtn").addEventListener("click", markAllAbsent);
   document.getElementById("clearBtn").addEventListener("click", clearAll);
-  document.getElementById("quickAbsentBtn").addEventListener("click", quickAbsent);
   document.getElementById("hrFilterBtn").addEventListener("click", toggleHrFilter);
   document.getElementById("submitBtn").addEventListener("click", submitAttendance);
   document.getElementById("copyCompleteBtn").addEventListener("click", copyComplete);
@@ -1843,3 +1826,4 @@ input[type="search"]:focus {
 
 </body>
 </html>
+
