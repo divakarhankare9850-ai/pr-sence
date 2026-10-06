@@ -200,6 +200,12 @@ input[type="search"]:focus {
   background: #fff7f7;
 }
 
+.btn.active {
+  background: #172a21;
+  border-color: #172a21;
+  color: #fff;
+}
+
 .filters {
   display: flex;
   gap: 7px;
@@ -673,6 +679,14 @@ input[type="search"]:focus {
       Quick Absent Mode
     </button>
 
+    <button
+      class="btn"
+      type="button"
+      id="hrFilterBtn"
+    >
+      Show HR Students Only
+    </button>
+
   </div>
 
 
@@ -972,6 +986,23 @@ input[type="search"]:focus {
 
   var currentFilter = "all";
 
+  // Roll numbers belonging to the HR specialisation, derived from the
+  // uploaded PRN list (e.g. 25PMB002 -> roll 2). Edit this array if the
+  // HR roster changes.
+  var HR_ROLL_NUMBERS = [
+    2, 9, 10, 13, 14, 41, 42, 51, 59, 62, 63, 64, 65, 66, 67, 68, 69, 70,
+    71, 72, 75, 82, 90, 91, 99, 100, 101, 104, 105, 107, 111, 112, 113,
+    114, 116, 119, 121, 123, 124, 125, 126, 129, 130, 131, 132, 134
+  ];
+
+  var HR_SET = {};
+
+  HR_ROLL_NUMBERS.forEach(function (number) {
+    HR_SET[number] = true;
+  });
+
+  var hrOnly = false;
+
   var studentNumbers = [];
 
   for (var i = 1; i <= TOTAL; i++) {
@@ -1219,8 +1250,9 @@ input[type="search"]:focus {
 
       var searchMatch = !search || roll.indexOf(search) !== -1;
       var filterMatch = currentFilter === "all" || currentFilter === status;
+      var hrMatch = !hrOnly || HR_SET[roll];
 
-      row.classList.toggle("hidden", !(searchMatch && filterMatch));
+      row.classList.toggle("hidden", !(searchMatch && filterMatch && hrMatch));
 
     });
 
@@ -1232,6 +1264,26 @@ input[type="search"]:focus {
       );
 
     });
+
+  }
+
+
+  function toggleHrFilter() {
+
+    hrOnly = !hrOnly;
+
+    var button = document.getElementById("hrFilterBtn");
+
+    button.classList.toggle("active", hrOnly);
+    button.textContent = hrOnly ? "Show All Students" : "Show HR Students Only";
+
+    applyFilter();
+
+    showToast(
+      hrOnly
+        ? "Showing HR students only (" + HR_ROLL_NUMBERS.length + ")"
+        : "Showing all students"
+    );
 
   }
 
@@ -1742,6 +1794,7 @@ input[type="search"]:focus {
   document.getElementById("allAbsentBtn").addEventListener("click", markAllAbsent);
   document.getElementById("clearBtn").addEventListener("click", clearAll);
   document.getElementById("quickAbsentBtn").addEventListener("click", quickAbsent);
+  document.getElementById("hrFilterBtn").addEventListener("click", toggleHrFilter);
   document.getElementById("submitBtn").addEventListener("click", submitAttendance);
   document.getElementById("copyCompleteBtn").addEventListener("click", copyComplete);
   document.getElementById("csvBtn").addEventListener("click", exportCSV);
